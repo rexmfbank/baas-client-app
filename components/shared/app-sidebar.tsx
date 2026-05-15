@@ -1,13 +1,8 @@
 "use client"
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard, Key, Webhook, ArrowRightLeft, CreditCard,
-  Settings, Scale, FileSearch,
-  Activity, BookOpen, Users, Server, ShieldCheck
-} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { usePlatform } from "@/context/platform-context";
-import { Role, ROLE_PORTAL } from "@/types/platform";
+import { ROLE_PORTAL } from "@/types/platform";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter,
@@ -15,18 +10,19 @@ import {
 } from "@/components/ui/sidebar";
 import { ChevronRight } from "lucide-react";
 import { getNavForRole } from "./navigation";
+import router from "next/router";
 
 const PORTAL_LABEL: Record<string, string> = { client: "Client", admin: "Operator" };
 
 
 const AppSidebar = () => {
   const { role, currentClient, environment } = usePlatform();
+  const router = useRouter();
   const pathname = usePathname();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const portal = ROLE_PORTAL[role];
   const navItems = getNavForRole(role);
-
 
 
   return (
@@ -36,7 +32,9 @@ const AppSidebar = () => {
     >
       {/* Brand block */}
       <div
-        className={`h-16 flex items-center gap-3 border-b border-sidebar-border ${
+        role="button"
+        onClick={() => router.push("/dashboard")}
+        className={`h-16 flex items-center gap-3 cursor-pointer border-b border-sidebar-border ${
           collapsed ? "justify-center px-2" : "px-5"
         }`}
       >
