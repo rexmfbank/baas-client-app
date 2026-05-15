@@ -1,5 +1,5 @@
 import API from "./axios-client";
-import { loginType, LoginResponseType, registerType, CountryResponseType, RegisterResponseType, VerifyPayloadType, VerifyOtpResponseType } from "@/types/auth.type";
+import { loginType, LoginResponseType, registerType, CountryResponseType, RegisterResponseType, VerifyPayloadType, VerifyOtpResponseType, ResendOtpPayloadType } from "@/types/auth.type";
 
 export const loginMutationFn = async (
     data: loginType
@@ -23,7 +23,7 @@ export const verifyOtpMutationFn = async (data: VerifyPayloadType): Promise<Veri
     return response.data;
 }
 
-export const resendOtpMutationFn = async (data: any) =>
+export const resendOtpMutationFn = async (data: ResendOtpPayloadType) =>
     await API.post("/client/onboarding/resend-otp", data);
 
 // export const logoutMutationFn = async () => await API.post("/auth/logout");

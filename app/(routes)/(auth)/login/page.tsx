@@ -1,7 +1,8 @@
 
 "use client"
 import * as z from "zod";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,10 +20,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Spinner } from "@/components/ui/spinner";
-import { loginMutationFn } from "@/lib/api-mutations";
 import type { LoginResponseType, loginType } from "@/types/auth.type";
 import { useAuthStore } from "@/store/store";
 import { toast } from "@/hooks/use-toast";
+import { createSession } from "@/lib/auth";
+import { loginMutationFn } from "@/lib/api-mutations";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -40,14 +42,26 @@ const getErrorMessage = (error: unknown) => {
 
 const LoginPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const clearVerificationTimer = useAuthStore((state) => state.clearVerificationTimer);
   const startVerificationTimer = useAuthStore((state) => state.startVerificationTimer);
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setUser = useAuthStore((state) => state.setUser);
+  const verified = searchParams.get("verified");
+
+  useEffect(() => {
+    if (verified === "1") {
+      toast({
+        title: "Account verified",
+        description: "You can sign in now.",
+        variant:"success"
+      });
+    }
+  }, [verified]);
 
   const loginMutation = useMutation<LoginResponseType, Error, loginType>({
     mutationFn: loginMutationFn,
-    onSuccess: (response, variables) => {
+    onSuccess: async (response, variables) => {
       if (!response.success && response.message === "Account not verified") {
         clearAuth();
         startVerificationTimer(600);
@@ -63,13 +77,11 @@ const LoginPage = () => {
         return;
       }
       if (response.data?.email && response.data?.token) {
+        await createSession(response.data.token);
         clearVerificationTimer();
-        setAuth({
-          user: {
-            email: response.data.email,
-            countryCode: response.data.countryCode,
-          },
-          token: response.data.token,
+        setUser({
+          email: response.data.email,
+          countryCode: response.data.countryCode,
         });
         router.push("/dashboard");
         return;

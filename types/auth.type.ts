@@ -1,4 +1,4 @@
-export type UserType = {}
+export type UserType = Record<string, never>;
 
 export type loginType = {
     email: string;
@@ -12,9 +12,9 @@ export type LoginResponseType = {
         email: string;
         countryCode: string;
         message: string;
-        token: string;
-    };
-    timestamp: string;
+        token?: string;
+    } | null;
+    timestamp: string | null;
 };
 
 export type registerType = {
@@ -48,6 +48,9 @@ export type CountryResponseType = {
 
 export type VerifyPayloadType = {
     otp: string;
+    email: string;
+}
+export type ResendOtpPayloadType = {
     email: string;
 }
 export type VerifyOtpResponseType = {

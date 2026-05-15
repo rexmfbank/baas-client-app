@@ -5,7 +5,7 @@ import createSelectors from "./selector";
 import { createAuthSlice, type AuthSlice } from "./auth/auth.slice";
 
 type RootStore = AuthSlice;
-type AuthPersistedState = Pick<AuthSlice, "user" | "token" | "verificationExpiresAt">;
+type AuthPersistedState = Pick<AuthSlice, "user" | "verificationExpiresAt">;
 
 const authStorage = createJSONStorage<AuthPersistedState>(() => localStorage);
 
@@ -19,7 +19,6 @@ const useStoreBase = create<RootStore>()(
       storage: authStorage,
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
         verificationExpiresAt: state.verificationExpiresAt,
       }),
     }
