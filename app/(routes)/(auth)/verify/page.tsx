@@ -1,12 +1,11 @@
 "use client"
-import { useState, Suspense } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import Logo from "@/components/logo";
-import { useTimer } from "@/hooks/use-timer";
 import { Spinner } from "@/components/ui/spinner";
 import { LoadingFallback } from "@/components/loading-fallback";
 import {
@@ -19,6 +18,10 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { resendOtpMutationFn, verifyOtpMutationFn } from "@/lib/api-mutations";
+import type { VerifyOtpResponseType, VerifyPayloadType } from "@/types/auth.type";
+import { useAuthStore } from "@/store/store";
 
 const verifySchema = z.object({
   otp: z.string().length(6, "Enter a 6-digit code"),
@@ -33,13 +36,31 @@ function VerifyContent() {
   const mode = searchParams.get("mode") || "signup";
   const intent = searchParams.get("intent") || "";
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [attempts, setAttempts] = useState(0);
-  const [locked, setLocked] = useState(false);
+  const verificationExpiresAt = useAuthStore((state) => state.verificationExpiresAt);
+  const startVerificationTimer = useAuthStore((state) => state.startVerificationTimer);
+  const clearVerificationTimer = useAuthStore((state) => state.clearVerificationTimer);
 
-  const timer = useTimer(300); // 5 minutes expiry
-  const resendIn = useTimer(30); // 30s resend cooldown
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const secondsLeft = useMemo(() => {
+    if (!verificationExpiresAt) return 0;
+    return Math.max(0, Math.ceil((verificationExpiresAt - now) / 1000));
+  }, [now, verificationExpiresAt]);
+
+  const isExpired = secondsLeft <= 0;
+
+  const resendMutation = useMutation({
+    mutationFn: resendOtpMutationFn,
+  });
+
+  const verifyMutation = useMutation<VerifyOtpResponseType, Error, VerifyPayloadType>({
+    mutationFn: verifyOtpMutationFn,
+  });
 
   const form = useForm<VerifyFormValues>({
     resolver: zodResolver(verifySchema),
@@ -49,38 +70,35 @@ function VerifyContent() {
   });
 
   const handleVerify = async (values: VerifyFormValues) => {
-    if (locked) return;
     setError("");
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Mock: any 6-digit code passes; "000000" simulates wrong code
-      if (values.otp === "000000") {
-        const next = attempts + 1;
-        setAttempts(next);
-        form.reset();
-        if (next >= 5) {
-          setLocked(true);
-          setError("Too many attempts. Try again in 5 minutes.");
-        } else {
-          setError(`Invalid code. Please try again. (${5 - next} attempts left)`);
-        }
-        return;
-      }
+    try {
+      await verifyMutation.mutateAsync({
+        otp: values.otp,
+        email,
+      });
+      
+      clearVerificationTimer();
       if (mode === "login") {
         router.push("/dashboard");
       } else {
         router.push(`/intent?intent=${intent}`);
       }
-    }, 700);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Verification failed");
+    }
   };
 
-  const handleResend = () => {
-    if (resendIn.seconds > 0) return;
-    timer.reset(300);
-    resendIn.reset(30);
-    form.reset();
+  const handleResend = async () => {
+    if (!isExpired || resendMutation.isPending || verifyMutation.isPending) return;
+
     setError("");
+    try {
+      await resendMutation.mutateAsync({ email });
+      startVerificationTimer(600);
+      form.reset({ otp: "" });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to resend code");
+    }
   };
 
   return (
@@ -107,7 +125,7 @@ function VerifyContent() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <InputOTP maxLength={6} {...field}>
+                          <InputOTP maxLength={6} {...field} disabled={verifyMutation.isPending}>
                             <InputOTPGroup>
                               <InputOTPSlot index={0} className="w-12 h-12" />
                               <InputOTPSlot index={1} className="w-12 h-12" />
@@ -135,10 +153,13 @@ function VerifyContent() {
                 </div>
 
                 <div className="text-center text-sm text-muted-foreground">
-                  {!timer.isExpired ? (
-                    <span>Code expires in {timer.minutes}:{timer.secs.toString().padStart(2, "0")}</span>
+                  {!isExpired ? (
+                    <span>
+                      Code expires in {Math.floor(secondsLeft / 60)}:
+                      {(secondsLeft % 60).toString().padStart(2, "0")}
+                    </span>
                   ) : (
-                    <span className="text-destructive">Code expired. Request a new one.</span>
+                    <span className="text-destructive">Code expired. You can request a new one now.</span>
                   )}
                 </div>
 
@@ -149,9 +170,9 @@ function VerifyContent() {
                 <Button
                   type="submit"
                   className="w-full gradient-primary text-primary-foreground"
-                  disabled={form.formState.isSubmitting || timer.isExpired || locked}
+                  disabled={verifyMutation.isPending || isExpired || resendMutation.isPending}
                 >
-                  {loading && <Spinner />}
+                  {verifyMutation.isPending && <Spinner />}
                   Verify <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </form>
@@ -162,11 +183,11 @@ function VerifyContent() {
                 variant="ghost"
                 size="sm"
                 onClick={handleResend}
-                disabled={resendIn.seconds > 0 || locked}
+                disabled={!isExpired || resendMutation.isPending || verifyMutation.isPending}
                 className="text-muted-foreground"
               >
-                <RefreshCw className="size-3" />
-                {resendIn.seconds > 0 ? `Resend code in ${resendIn.seconds}s` : "Resend code"}
+                {resendMutation.isPending ? <Spinner /> : <RefreshCw className="size-3" />}
+                {resendMutation.isPending ? "Sending new code..." : "Resend code"}
               </Button>
             </div>
           </CardContent>
