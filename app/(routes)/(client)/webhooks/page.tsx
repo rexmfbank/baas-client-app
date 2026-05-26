@@ -25,7 +25,13 @@ const WebhooksPage = () => {
   const hasWebhook = clientWebhooks.length > 0;
 
   const handleAdd = () => {
-    executeAction("add-webhook", () => {
+    executeAction("add-webhook", async () => {
+      const response = {success:false}
+
+      if (!response.success) {
+        //throw new Error(response.message || "Unable to add webhook");
+      }
+
       const wh: Webhook = {
         id: `wh-${Date.now()}`,
         clientId: currentClientId,

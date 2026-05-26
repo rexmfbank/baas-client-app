@@ -1,5 +1,5 @@
 "use client"
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import { useMutation } from "@tanstack/react-query";
 import { resendOtpMutationFn, verifyOtpMutationFn } from "@/lib/api-mutations";
 import type { VerifyOtpResponseType, VerifyPayloadType } from "@/types/auth.type";
 import { useAuthStore } from "@/store/store";
+import { useOtpTimer } from "@/hooks/use-otp-timer";
+import { toast } from "@/hooks/use-toast";
 
 const verifySchema = z.object({
   otp: z.string().length(6, "Enter a 6-digit code"),
@@ -34,25 +36,12 @@ function VerifyContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "your email";
   const mode = searchParams.get("mode") || "signup";
-  const intent = searchParams.get("intent") || "";
 
   const [error, setError] = useState("");
   const verificationExpiresAt = useAuthStore((state) => state.verificationExpiresAt);
   const startVerificationTimer = useAuthStore((state) => state.startVerificationTimer);
   const clearVerificationTimer = useAuthStore((state) => state.clearVerificationTimer);
-
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const secondsLeft = useMemo(() => {
-    if (!verificationExpiresAt) return 0;
-    return Math.max(0, Math.ceil((verificationExpiresAt - now) / 1000));
-  }, [now, verificationExpiresAt]);
-
-  const isExpired = secondsLeft <= 0;
+  const { minutes, secs, isExpired } = useOtpTimer(verificationExpiresAt);
 
   const resendMutation = useMutation({
     mutationFn: resendOtpMutationFn,
@@ -72,32 +61,51 @@ function VerifyContent() {
   const handleVerify = async (values: VerifyFormValues) => {
     setError("");
     try {
-      await verifyMutation.mutateAsync({
+      const response = await verifyMutation.mutateAsync({
         otp: values.otp,
         email,
       });
-      
-      clearVerificationTimer();
-      if (mode === "login") {
-        router.push("/dashboard");
-      } else {
-        router.push(`/intent?intent=${intent}`);
+
+      if (!response.success) {
+        const message = response.message || "Verification failed";
+        setError(message);
+        toast({
+          title: "Verification failed",
+          description: message,
+          variant: "destructive",
+        });
+        if (response.message?.toLowerCase().includes("expired")) {
+          clearVerificationTimer();
+        }
+        return;
       }
+
+      clearVerificationTimer();
+      router.push("/login?verified=1");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Verification failed");
+      const message = error instanceof Error ? error.message : "Verification failed";
+      setError(message);
+      toast({
+        title: "Verification failed",
+        description: message,
+        variant: "destructive",
+      });
     }
   };
 
   const handleResend = async () => {
     if (!isExpired || resendMutation.isPending || verifyMutation.isPending) return;
-
     setError("");
     try {
       await resendMutation.mutateAsync({ email });
       startVerificationTimer(600);
       form.reset({ otp: "" });
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Unable to resend code");
+      toast({
+        title: "Unable to resend code",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
     }
   };
 
@@ -155,8 +163,7 @@ function VerifyContent() {
                 <div className="text-center text-sm text-muted-foreground">
                   {!isExpired ? (
                     <span>
-                      Code expires in {Math.floor(secondsLeft / 60)}:
-                      {(secondsLeft % 60).toString().padStart(2, "0")}
+                      Code expires in {minutes}:{secs.toString().padStart(2, "0")}
                     </span>
                   ) : (
                     <span className="text-destructive">Code expired. You can request a new one now.</span>
