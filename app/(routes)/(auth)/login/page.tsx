@@ -23,8 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import type { LoginResponseType, loginType } from "@/types/auth.type";
 import { useAuthStore } from "@/store/store";
 import { toast } from "@/hooks/use-toast";
-import { createSession } from "@/lib/auth";
-import { loginMutationFn } from "@/lib/api-mutations";
+import { loginAction } from "@/lib/cookie-auth";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -48,20 +47,21 @@ const LoginPage = () => {
   const startVerificationTimer = useAuthStore((state) => state.startVerificationTimer);
   const setUser = useAuthStore((state) => state.setUser);
   const verified = searchParams.get("verified");
+  const nextPath = searchParams.get("next");
 
   useEffect(() => {
     if (verified === "1") {
       toast({
         title: "Account verified",
         description: "You can sign in now.",
-        variant:"success"
+        variant: "success",
       });
     }
   }, [verified]);
 
   const loginMutation = useMutation<LoginResponseType, Error, loginType>({
-    mutationFn: loginMutationFn,
-    onSuccess: async (response, variables) => {
+    mutationFn: loginAction,
+    onSuccess: (response, variables) => {
       if (!response.success && response.message === "Account not verified") {
         clearAuth();
         startVerificationTimer(600);
@@ -76,14 +76,13 @@ const LoginPage = () => {
         });
         return;
       }
-      if (response.data?.email && response.data?.token) {
-        await createSession(response.data.token);
+      if (response.data?.email) {
         clearVerificationTimer();
         setUser({
           email: response.data.email,
           countryCode: response.data.countryCode,
         });
-        router.push("/dashboard");
+        router.push(nextPath?.startsWith("/") ? nextPath : "/dashboard");
         return;
       }
 

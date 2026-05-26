@@ -67,7 +67,13 @@ function VerifyContent() {
       });
 
       if (!response.success) {
-        setError(response.message || "Verification failed");
+        const message = response.message || "Verification failed";
+        setError(message);
+        toast({
+          title: "Verification failed",
+          description: message,
+          variant: "destructive",
+        });
         if (response.message?.toLowerCase().includes("expired")) {
           clearVerificationTimer();
         }
@@ -77,7 +83,13 @@ function VerifyContent() {
       clearVerificationTimer();
       router.push("/login?verified=1");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Verification failed");
+      const message = error instanceof Error ? error.message : "Verification failed";
+      setError(message);
+      toast({
+        title: "Verification failed",
+        description: message,
+        variant: "destructive",
+      });
     }
   };
 

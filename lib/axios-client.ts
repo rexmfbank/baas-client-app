@@ -11,6 +11,19 @@ const options = {
 };
 const API = axios.create(options);
 
+API.interceptors.request.use(async (config) => {
+    if (typeof window !== "undefined") {
+        return config;
+    }
+    const { getSessionToken } = await import("@/lib/cookie-auth");
+    const token = await getSessionToken();
+
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 API.interceptors.response.use(
     (response) => {
         return response;
@@ -19,7 +32,7 @@ API.interceptors.response.use(
         const data = error.response?.data;
         const status = error.response?.status;
 
-        if (data === "Unauthorized" && status === 401) {
+        if (typeof window !== "undefined" && data === "Unauthorized" && status === 401) {
             window.location.href = "/";
         }
         const customError: CustomError = {

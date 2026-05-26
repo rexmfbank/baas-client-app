@@ -15,7 +15,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "@/hooks/use-toast";
 import { getDefaultPathForRole } from "./navigation";
 
-const ROLES: Role[] = ["client", "rex-mfb"];
+const ROLES: Role[] = ["client"];
 
 const Header = () => {
   const {

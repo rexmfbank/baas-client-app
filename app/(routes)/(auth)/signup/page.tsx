@@ -76,7 +76,17 @@ function SignupContent() {
 
   const handleSignup = async (values: SignupFormValues) => {
     try {
-      await registerMutation.mutateAsync(values as registerType);
+      const response = await registerMutation.mutateAsync(values as registerType);
+
+      if (!response.success) {
+        toast({
+          title: "Signup failed",
+          description: response.message || "Unable to create account",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setUser({
         email: values.email,
         countryCode: values.countryCode,
@@ -87,7 +97,7 @@ function SignupContent() {
         description: "Account created successfully",
         variant: "success",
       });
-      router.push(`/verify?email=${values.email}&intent=${intentFromLanding}`);
+      router.push(`/verify?email=${encodeURIComponent(values.email)}&intent=${intentFromLanding}`);
     } catch (error: unknown) {
       toast({
         title: "Error",
