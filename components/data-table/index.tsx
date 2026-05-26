@@ -16,6 +16,7 @@ import {
 import { Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
   EmptyContent,
@@ -218,60 +219,68 @@ export function DataTable<TData, TValue = unknown>({
         </div>
       )}
 
-      {isLoading ? (
-        <TableSkeleton columns={columns.length || 1} rows={skeletonRows} />
-      ) : (
-        <div className={cn("overflow-x-auto rounded-md border", tableClassName)}>
-          <Table>
-            <TableHeader className="bg-muted/50">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="text-xs font-medium">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <TableSkeleton
+              columns={columns.length || 1}
+              rows={skeletonRows}
+              className="border-0"
+            />
+          ) : (
+            <div className={cn("overflow-x-auto", tableClassName)}>
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="text-xs font-medium">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
                   ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() ? "selected" : undefined}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length > 0 ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() ? "selected" : undefined}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-40">
+                        <Empty className="border-0">
+                          <EmptyHeader>
+                            <EmptyTitle>{emptyTitle}</EmptyTitle>
+                            {emptyDescription && (
+                              <EmptyDescription>{emptyDescription}</EmptyDescription>
+                            )}
+                          </EmptyHeader>
+                          <EmptyContent />
+                        </Empty>
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-40">
-                    <Empty className="border-0">
-                      <EmptyHeader>
-                        <EmptyTitle>{emptyTitle}</EmptyTitle>
-                        {emptyDescription && (
-                          <EmptyDescription>{emptyDescription}</EmptyDescription>
-                        )}
-                      </EmptyHeader>
-                      <EmptyContent />
-                    </Empty>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {isShowPagination && (
         <DataTablePagination

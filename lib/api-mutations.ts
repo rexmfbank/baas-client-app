@@ -34,6 +34,11 @@ export const getApiKeysMutationFn = async (): Promise<ApiKeysResponseType> => {
     return response.data;
 };
 
+export const createApiKeysMutationFn = async (): Promise<ApiKeysResponseType> => {
+    const response = await API.post("/client/onboarding/apikeys");
+    return response.data;
+};
+
 export const createWebhookMutationFn = async (
     data: CreateWebhookPayloadType
 ): Promise<CreateWebhookResponseType> => {
