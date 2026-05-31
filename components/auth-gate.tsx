@@ -14,13 +14,22 @@ const AuthGate = ({ children, mode }: AuthGateProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const token = useAuthStore((state) => state.token);
-  const [hydrated, setHydrated] = useState(useAuthStoreBase.persist.hasHydrated());
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = useAuthStoreBase.persist.onFinishHydration(() => {
+    const persistAPI = useAuthStoreBase.persist;
+    if (!persistAPI) {
+      setHydrated(true);
+      return;
+    }
+    if (persistAPI.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    const unsubscribe = persistAPI.onFinishHydration(() => {
       setHydrated(true);
     });
-
+    
     return unsubscribe;
   }, []);
 
