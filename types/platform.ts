@@ -188,6 +188,13 @@ export interface VirtualAccount {
   createdAt: string;
 }
 
+export type VirtualAccountResponseType = {
+  success: boolean;
+  message: string;
+  data: VirtualAccount[] | null;
+  timestamp: string | null;
+};
+
 export interface AuditLog {
   id: string;
   actor: string;

@@ -1,11 +1,10 @@
 import React, { useState, useCallback } from "react";
 import {
   Role, Environment, OnboardingStage, Client, Transaction, ApiKey, Webhook,
-  Dispute, Wallet, VirtualAccount, ReversalRequest, TransactionLimit,
+  Dispute, VirtualAccount, ReversalRequest, TransactionLimit,
   TransactionTier, BroadcastNotification,
   ComplianceProfile, BusinessInformation, BusinessRegistrationInformation,
-  BusinessPerson, ClientDocument, ClientBankAccount, ServiceAgreementAcceptance,
-  GoLiveRequest, ComplianceSectionKey, SectionStatus, DocumentReviewStatus,
+  BusinessPerson, ClientDocument, ClientBankAccount, ComplianceSectionKey, SectionStatus, DocumentReviewStatus,
   BusinessTypeCode,
 } from "@/types/platform";
 import {

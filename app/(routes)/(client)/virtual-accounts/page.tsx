@@ -1,22 +1,30 @@
 "use client"
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatNaira, downloadCSV } from "@/lib/formatters";
 import { usePlatform } from "@/context/platform-context";
 import { useActionState } from "@/hooks/use-action-state";
-import { CreditCard, Eye, Power, PowerOff, Download, ArrowLeft } from "lucide-react";
+import { Eye, Power, PowerOff, Download, ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VirtualAccount } from "@/types/platform";
 import { Spinner } from "@/components/ui/spinner";
+import { DataTable, type ColumnDef } from "@/components/data-table";
+import { getVirtualAccountsQueryFn } from "@/lib/api-mutations";
 
 const VirtualAccountsPage = () => {
-  const { currentClientId, virtualAccounts, updateVirtualAccount, transactions } = usePlatform();
+  const { currentClientId,updateVirtualAccount, virtualAccounts,transactions } = usePlatform();
+    const accounts = virtualAccounts.filter(a => a.clientId === currentClientId);
   const { executeAction, isLoading } = useActionState();
-  const accounts = virtualAccounts.filter(a => a.clientId === currentClientId);
+  const virtualAccountsQuery = useQuery({
+    queryKey: ["virtual-accounts"],
+    queryFn: getVirtualAccountsQueryFn,
+  });
+
   const [selectedAccount, setSelectedAccount] = useState<VirtualAccount | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ id: string; action: "activate" | "deactivate" } | null>(null);
 
@@ -33,7 +41,7 @@ const VirtualAccountsPage = () => {
   };
 
   const accountTxns = selectedAccount
-    ? transactions.filter(t => t.clientId === currentClientId).slice(0, 10)
+    ? transactions.slice(0, 10)
     : [];
 
   const handleExportTxns = () => {
@@ -48,8 +56,66 @@ const VirtualAccountsPage = () => {
     })), `rex-va-transactions-${selectedAccount?.accountNumber}.csv`);
   };
 
+  const virtual_accountData = virtualAccountsQuery.data?.data ?? []
+  const columns: ColumnDef<VirtualAccount, unknown>[] = [
+    {
+      accessorKey: "accountName",
+      header: "Account Name",
+      cell: ({ row }) => <span className="font-medium">{row.original.accountName}</span>,
+    },
+    {
+      accessorKey: "accountNumber",
+      header: "Account Number",
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.accountNumber}</span>,
+    },
+    {
+      accessorKey: "bankName",
+      header: "Bank",
+      cell: ({ row }) => <span>{row.original.bankName}</span>,
+    },
+    {
+      accessorKey: "balance",
+      header: "Balance",
+      cell: ({ row }) => <span className="font-medium">{formatNaira(row.original.balance)}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge className={row.original.status === "active" ? "bg-success" : "bg-muted"}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => <span>{formatDate(row.original.createdAt)}</span>,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedAccount(row.original)}>
+            <Eye className="h-3.5 w-3.5 mr-1" /> View
+          </Button>
+          {row.original.status === "active" ? (
+            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirmAction({ id: row.original.id, action: "deactivate" })}>
+              <PowerOff className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" className="text-success" onClick={() => setConfirmAction({ id: row.original.id, action: "activate" })}>
+              <Power className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   if (selectedAccount) {
-    const freshAccount = virtualAccounts.find(a => a.id === selectedAccount.id) || selectedAccount;
+    const freshAccount = accounts.find(a => a.id === selectedAccount.id) || selectedAccount;
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
@@ -172,62 +238,19 @@ const VirtualAccountsPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold">Rex Virtual Accounts</h1>
-          <p className="text-muted-foreground text-sm">{accounts.length} accounts powered by Rex</p>
+          <p className="text-muted-foreground text-sm">{virtual_accountData?.length || 0} accounts powered by Rex</p>
         </div>
       </div>
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Account Name</TableHead>
-                <TableHead>Account Number</TableHead>
-                <TableHead>Bank</TableHead>
-                <TableHead>Balance</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map(a => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.accountName}</TableCell>
-                  <TableCell className="font-mono text-xs">{a.accountNumber}</TableCell>
-                  <TableCell>{a.bankName}</TableCell>
-                  <TableCell className="font-medium">{formatNaira(a.balance)}</TableCell>
-                  <TableCell><Badge className={a.status === "active" ? "bg-success" : "bg-muted"}>{a.status}</Badge></TableCell>
-                  <TableCell>{formatDate(a.createdAt)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedAccount(a)}>
-                        <Eye className="h-3.5 w-3.5 mr-1" /> View
-                      </Button>
-                      {a.status === "active" ? (
-                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirmAction({ id: a.id, action: "deactivate" })}>
-                          <PowerOff className="h-3.5 w-3.5" />
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" size="sm" className="text-success" onClick={() => setConfirmAction({ id: a.id, action: "activate" })}>
-                          <Power className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {accounts.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    No Rex virtual accounts yet
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        data={virtual_accountData}
+        columns={columns}
+        showSearch={false}
+        isShowPagination={false}
+        isLoading={virtualAccountsQuery.isLoading || virtualAccountsQuery.isFetching}
+        emptyTitle="No Rex virtual accounts yet"
+        emptyDescription="No virtual accounts were returned for this client."
+        tableClassName="rounded-lg"
+      />
 
       {/* Confirm Modal for list actions */}
       <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>

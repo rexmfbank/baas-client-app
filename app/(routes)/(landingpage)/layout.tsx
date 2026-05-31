@@ -2,16 +2,14 @@
 
 import AuthGate from "@/components/auth-gate";
 
-export default function AuthLayout({
+export default function LandingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <AuthGate mode="public">
-      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
         {children}
-      </div>
     </AuthGate>
   );
 }

@@ -13,7 +13,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Search, X } from "lucide-react";
+import { Inbox, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
@@ -57,9 +58,9 @@ export type DataTablePaginationState = {
   pageSize?: number;
 };
 
-type DataTableProps<TData, TValue = unknown> = {
+type DataTableProps<TData> = {
   data: TData[];
-  columns: ColumnDef<TData, TValue>[];
+  columns: ColumnDef<TData, unknown>[];
   searchPlaceholder?: string;
   showSearch?: boolean;
   filters?: DataTableFilterOption[];
@@ -81,7 +82,7 @@ type DataTableProps<TData, TValue = unknown> = {
   onPageSizeChange?: (pageSize: number) => void;
 };
 
-export function DataTable<TData, TValue = unknown>({
+export function DataTable<TData>({
   data,
   columns,
   searchPlaceholder = "Search...",
@@ -103,7 +104,7 @@ export function DataTable<TData, TValue = unknown>({
   onFilterChange,
   onPageChange,
   onPageSizeChange,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [filterValues, setFilterValues] = React.useState<Record<string, string>>({});
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -265,9 +266,12 @@ export function DataTable<TData, TValue = unknown>({
                       <TableCell colSpan={columns.length} className="h-40">
                         <Empty className="border-0">
                           <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                              <Inbox className="size-8" />
+                            </EmptyMedia>
                             <EmptyTitle>{emptyTitle}</EmptyTitle>
                             {emptyDescription && (
-                              <EmptyDescription>{emptyDescription}</EmptyDescription>
+                              <EmptyDescription className="-mt-1.5">{emptyDescription}</EmptyDescription>
                             )}
                           </EmptyHeader>
                           <EmptyContent />

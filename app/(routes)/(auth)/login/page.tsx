@@ -23,7 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import type { LoginResponseType, loginType } from "@/types/auth.type";
 import { useAuthStore } from "@/store/store";
 import { toast } from "@/hooks/use-toast";
-import { loginAction } from "@/lib/cookie-auth";
+import { loginMutationFn } from "@/lib/api-mutations";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -45,7 +45,7 @@ const LoginPage = () => {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const clearVerificationTimer = useAuthStore((state) => state.clearVerificationTimer);
   const startVerificationTimer = useAuthStore((state) => state.startVerificationTimer);
-  const setUser = useAuthStore((state) => state.setUser);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const verified = searchParams.get("verified");
   const nextPath = searchParams.get("next");
 
@@ -60,7 +60,7 @@ const LoginPage = () => {
   }, [verified]);
 
   const loginMutation = useMutation<LoginResponseType, Error, loginType>({
-    mutationFn: loginAction,
+    mutationFn: loginMutationFn,
     onSuccess: (response, variables) => {
       if (!response.success && response.message === "Account not verified") {
         clearAuth();
@@ -76,11 +76,14 @@ const LoginPage = () => {
         });
         return;
       }
-      if (response.data?.email) {
+      if (response.data?.email && response.data.token) {
         clearVerificationTimer();
-        setUser({
-          email: response.data.email,
-          countryCode: response.data.countryCode,
+        setAuth({
+          user: {
+            email: response.data.email,
+            countryCode: response.data.countryCode,
+          },
+          token: response.data.token,
         });
         router.push(nextPath?.startsWith("/") ? nextPath : "/dashboard");
         return;
@@ -88,7 +91,7 @@ const LoginPage = () => {
 
       toast({
         title: "Sign in failed",
-        description: "Missing login data from server",
+        description: "Missing login token from server",
         variant: "destructive",
       });
     },

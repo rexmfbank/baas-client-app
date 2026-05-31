@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Plus, AlertTriangle } from "lucide-react";
 
 import { DataTable, type ColumnDef } from "@/components/data-table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,18 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 import { usePlatform } from "@/context/platform-context";
 import { toast } from "@/hooks/use-toast";
-import { createApiKeysAction, getApiKeysAction } from "@/lib/api-key-actions";
 import { maskKey } from "@/lib/formatters";
-
-type ApiKeyRow = {
-  id: "publicKey" | "secretKey";
-  name: string;
-  key: string;
-  status: "active";
-};
+import { createApiKeysMutationFn, getApiKeysQueryFn } from "@/lib/api-mutations";
+import { ApiKeysType } from "@/types/api-key.type";
+import { Spinner } from "@/components/ui/spinner";
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
@@ -35,16 +28,16 @@ const getErrorMessage = (error: unknown) => {
 
 const ApiKeysPage = () => {
   const { environment, canAccessLive } = usePlatform();
-  const queryClient = useQueryClient();
   const [showGenerate, setShowGenerate] = useState(false);
+  const queryClient = useQueryClient();
 
   const apiKeysQuery = useQuery({
     queryKey: ["api-keys"],
-    queryFn: getApiKeysAction,
+    queryFn: getApiKeysQueryFn,
   });
 
   const createApiKeysMutation = useMutation({
-    mutationFn: createApiKeysAction,
+    mutationFn: createApiKeysMutationFn,
     onSuccess: (response) => {
       if (!response.success) {
         toast({
@@ -72,22 +65,42 @@ const ApiKeysPage = () => {
     },
   });
 
-  const rows: ApiKeyRow[] = apiKeysQuery.data?.data
-    ? [
-        {
-          id: "publicKey",
-          name: "Public Key",
-          key: apiKeysQuery.data.data.publicKey,
-          status: "active",
-        },
-        {
-          id: "secretKey",
-          name: "Secret Key",
-          key: apiKeysQuery.data.data.secretKey,
-          status: "active",
-        },
-      ].filter((row) => row.key)
-    : [];
+  const apisData = (apiKeysQuery.data?.data ?? []) as ApiKeysType[];
+
+  const columns: ColumnDef<ApiKeysType, unknown>[] = [
+    {
+      accessorKey: "publicKey",
+      header: "Public Key",
+      cell: ({ row }) => (
+        <code className="rounded bg-muted px-2 py-1 text-xs">
+          {maskKey(row.original.publicKey)}
+        </code>
+      ),
+    },
+    {
+      accessorKey: "secretKey",
+      header: "Secret Key",
+      cell: ({ row }) => (
+        <code className="rounded bg-muted px-2 py-1 text-xs">
+          {maskKey(row.original.secretKey)}
+        </code>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => copyKey(row.original.secretKey)}
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      ),
+    },
+  ];
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
@@ -107,51 +120,9 @@ const ApiKeysPage = () => {
       });
       return;
     }
-
-    createApiKeysMutation.mutate();
+    createApiKeysMutation.mutate()
   };
 
-  const columns: ColumnDef<ApiKeyRow>[] = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.name}</span>
-      ),
-    },
-    {
-      accessorKey: "key",
-      header: "Key",
-      cell: ({ row }) => (
-        <code className="rounded bg-muted px-2 py-1 text-xs">
-          {maskKey(row.original.key)}
-        </code>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: () => (
-        <Badge variant="default" className="bg-success">
-          Active
-        </Badge>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => copyKey(row.original.key)}
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </Button>
-      ),
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -185,7 +156,7 @@ const ApiKeysPage = () => {
       )}
 
       <DataTable
-        data={rows}
+        data={apisData}
         columns={columns}
         showSearch={false}
         isShowPagination={false}
@@ -222,7 +193,7 @@ const ApiKeysPage = () => {
                 </>
               ) : (
                 "Generate"
-              )}
+                )}
             </Button>
           </DialogFooter>
         </DialogContent>

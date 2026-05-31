@@ -7,6 +7,11 @@ import { usePlatform } from "@/context/platform-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,6 +28,7 @@ const TransactionsPage = ()=> {
   const { executeAction, isLoading } = useActionState();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [searchField, setSearchField] = useState<"reference" | "recipient">("reference");
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   const [showDispute, setShowDispute] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
@@ -30,7 +36,13 @@ const TransactionsPage = ()=> {
   const filtered = transactions
     .filter(t => t.environment === environment && t.clientId === currentClientId)
     .filter(t => statusFilter === "all" || t.status === statusFilter)
-    .filter(t => !search || t.reference.toLowerCase().includes(search.toLowerCase()) || t.recipientName.toLowerCase().includes(search.toLowerCase()));
+    .filter(t => {
+      if (!search) return true;
+      const value = search.toLowerCase();
+      return searchField === "reference"
+        ? t.reference.toLowerCase().includes(value)
+        : t.recipientName.toLowerCase().includes(value);
+    });
 
   const { currentPage, totalPages, startIndex, endIndex, goToPage } = usePagination({ totalItems: filtered.length });
   const paged = filtered.slice(startIndex, endIndex);
@@ -71,12 +83,29 @@ const TransactionsPage = ()=> {
       </div>
 
       <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search by reference or recipient..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
+        <InputGroup className="flex-1 h-9!">
+          <InputGroupAddon align="inline-start" className="pr-0">
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </InputGroupAddon>
+          <InputGroupAddon align="inline-start" className="px-0">
+            <Select value={searchField} onValueChange={(value) => setSearchField(value as "reference" | "recipient")}>
+              <SelectTrigger className="h-full w-[130px] border-0!  bg-transparent shadow-none focus:border-0! focus:ring-0! focus:ring-offset-0!">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="reference">Reference</SelectItem>
+                <SelectItem value="recipient">Recipient</SelectItem>
+              </SelectContent>
+            </Select>
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder={`Search by ${searchField}...`}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </InputGroup>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-40 h-9 bg-surface"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>

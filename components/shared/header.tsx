@@ -1,9 +1,10 @@
 "use client"
 import { useRouter } from "next/navigation";
-import { Bell, ChevronDown, User, Search, Command } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Search, Command } from "lucide-react";
 import { usePlatform } from "@/context/platform-context";
 import { Role, ROLE_LABELS } from "@/types/platform";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -14,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "@/hooks/use-toast";
 import { getDefaultPathForRole } from "./navigation";
+import { useAuthStore } from "@/store/store";
 
 const ROLES: Role[] = ["client"];
 
@@ -24,6 +26,16 @@ const Header = () => {
     currentClient,
   } = usePlatform();
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const displayName = user?.email ?? "Client";
+  const avatarLabel = displayName
+    .split("@")[0]
+    .split(/[._-]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "C";
 
   const handleRoleSwitch = (r: Role) => {
     setRole(r);
@@ -42,6 +54,11 @@ const Header = () => {
       return;
     }
     setEnvironment(checked ? "live" : "sandbox");
+  };
+
+  const handleLogout = () => {
+    clearAuth();
+    router.replace("/login");
   };
 
   return (
@@ -174,20 +191,20 @@ const Header = () => {
 
           {/* Role switcher (workspace) */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-9 gap-2 rounded-lg pl-1.5 pr-2.5 hover:bg-muted/60"
+            <DropdownMenuTrigger className="" asChild>
+              <button
+                className="border-0! outline-0! flex items-center h-9 gap-2 rounded-lg pl-1.5 pr-2.5 hover:bg-muted/60 "
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <User className="h-3 w-3" />
-                </span>
-                <span className="hidden md:inline text-[12px] font-medium">
-                  {ROLE_LABELS[role]}
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-semibold">
+                    {avatarLabel}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden md:inline max-w-[120px] truncate text-[12px] font-medium">
+                  {displayName}
                 </span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 border-border shadow-luxury">
               <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">
@@ -205,7 +222,16 @@ const Header = () => {
                     <span className="ml-auto h-1.5 w-1.5 rounded-full bg-accent" />
                   )}
                 </DropdownMenuItem>
-              ))}
+                  ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-[13px] text-destructive 
+                focus:text-destructive hover:bg-destructive/10!"
+              >
+                <LogOut className="mr-2 h-3.5 w-3.5" />
+                Log out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

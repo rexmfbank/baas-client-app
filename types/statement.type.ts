@@ -1,9 +1,16 @@
 export type StatementQueryType = {
   page?: number;
   pageSize?: number;
+  accountNo?: string;
   startDate?: string;
   endDate?: string;
+  entityCode?: string;
+  tranCode?: string;
   status?: string;
+  orderType?: string;
+  tranDesc?: string;
+  transactionType?: string;
+  terminalId?: string;
   search?: string;
 };
 

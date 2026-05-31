@@ -2,9 +2,11 @@
 import Logo from './logo'
 import { Button } from './ui/button'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/store'
 
 const Navigation = () => {
     const router = useRouter()
+    const token = useAuthStore((state) => state.token)
     return (
 
         <nav className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
@@ -15,11 +17,20 @@ const Navigation = () => {
                         onClick={() => window.open("https://docs.rexbaas.com", "_blank")}>
                         API Docs
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push("/login")}>Sign In</Button>
-                    <Button size="sm" className="gradient-primary text-primary-foreground"
-                        onClick={() => router.push("/signup")}>
-                        Create Account
-                    </Button>
+                    {token ? (
+                        <Button size="sm" className="gradient-primary text-primary-foreground"
+                            onClick={() => router.push("/dashboard")}>
+                            Dashboard
+                        </Button>
+                    ) : (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => router.push("/login")}>Sign In</Button>
+                            <Button size="sm" className="gradient-primary text-primary-foreground"
+                                onClick={() => router.push("/signup")}>
+                                Create Account
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </nav>
