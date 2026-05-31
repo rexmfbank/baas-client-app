@@ -13,13 +13,12 @@ const API = axios.create(options);
 
 API.interceptors.request.use(async (config) => {
     if (typeof window !== "undefined") {
+        const { useAuthStore } = await import("@/store/store");
+        const token = useAuthStore.getState().token;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
-    }
-    const { getSessionToken } = await import("@/lib/cookie-auth");
-    const token = await getSessionToken();
-
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
@@ -32,9 +31,11 @@ API.interceptors.response.use(
         const data = error.response?.data;
         const status = error.response?.status;
 
-        if (typeof window !== "undefined" && data === "Unauthorized" && status === 401) {
-            window.location.href = "/";
-        }
+       if (typeof window !== "undefined" && data === "Unauthorized" && status === 401) {
+       const { useAuthStore } = await import("@/store/store");
+        useAuthStore.getState().clearAuth();
+    window.location.href = "/login";
+}
         const customError: CustomError = {
             ...error,
             errorCode: data?.errorCode || "UNKNOWN_ERROR",

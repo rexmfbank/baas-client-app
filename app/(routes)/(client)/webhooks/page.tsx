@@ -1,5 +1,6 @@
 "use client"
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { usePlatform } from "@/context/platform-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,39 +13,49 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, TestTube, RotateCcw, Pencil, Check, X } from "lucide-react";
 import { Webhook } from "@/types/platform";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/hooks/use-toast";
+import { createWebhookMutationFn } from "@/lib/api-mutations";
 
 const WebhooksPage = () => {
-  const { webhooks, addWebhook, removeWebhook, updateWebhook, currentClientId } = usePlatform();
+  const { webhooks, removeWebhook, updateWebhook, currentClientId } = usePlatform();
   const { executeAction, isLoading } = useActionState();
   const [showAdd, setShowAdd] = useState(false);
   const [url, setUrl] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editUrl, setEditUrl] = useState("");
-
-  const clientWebhooks = webhooks.filter(w => w.clientId === currentClientId);
-  const hasWebhook = clientWebhooks.length > 0;
-
-  const handleAdd = () => {
-    executeAction("add-webhook", async () => {
-      const response = {success:false}
-
+  const createWebhookMutation = useMutation({
+    mutationFn: createWebhookMutationFn,
+    onSuccess: (response) => {
       if (!response.success) {
-        //throw new Error(response.message || "Unable to add webhook");
+        toast({
+          title: "Error",
+          description: response.message || "Failed to create webhook, Try again.",
+          variant: "destructive",
+        });
+        return;
       }
-
-      const wh: Webhook = {
-        id: `wh-${Date.now()}`,
-        clientId: currentClientId,
-        url,
-        events: ["all"],
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        successRate: 100,
-      };
-      addWebhook(wh);
       setShowAdd(false);
       setUrl("");
-    }, "Webhook added — all Rex MFB events will be delivered");
+      toast({
+        title: "Success",
+        description: response.message || "Webhook added successfully.",
+        variant: "success",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create webhook. Try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clientWebhooks = webhooks.filter(w => w.clientId === currentClientId);
+  //const hasWebhook = clientWebhooks.length > 0;
+
+  const handleAdd = () => {
+    createWebhookMutation.mutate({ webhookUrl: url });
   };
 
   const handleTest = (whId: string) => {
@@ -74,11 +85,11 @@ const WebhooksPage = () => {
           <h1 className="text-2xl font-display font-bold">Webhooks</h1>
           <p className="text-muted-foreground text-sm">Receive real-time notifications for all Rex MFB events</p>
         </div>
-        {!hasWebhook && (
-          <Button className="gradient-primary text-primary-foreground" onClick={() => setShowAdd(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Webhook
-          </Button>
-        )}
+      
+        <Button className="gradient-primary text-primary-foreground" onClick={() => setShowAdd(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Add Webhook
+        </Button>
+        
       </div>
 
       <Card>
@@ -162,8 +173,8 @@ const WebhooksPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button className="gradient-primary text-primary-foreground" onClick={handleAdd} disabled={isLoading("add-webhook") || !url}>
-              {isLoading("add-webhook") ? 
+            <Button className="gradient-primary text-primary-foreground" onClick={handleAdd} disabled={createWebhookMutation.isPending || !url}>
+              {createWebhookMutation.isPending ? 
               <><Spinner/> Adding...</>
               : "Add Webhook"}
             </Button>
@@ -175,3 +186,5 @@ const WebhooksPage = () => {
 }
 
 export default WebhooksPage;
+
+

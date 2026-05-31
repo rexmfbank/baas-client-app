@@ -6,6 +6,6 @@ export type ApiKeysType = {
 export type ApiKeysResponseType = {
   success: boolean;
   message: string;
-  data: ApiKeysType | null;
+  data: ApiKeysType[];
   timestamp: string | null;
 };
