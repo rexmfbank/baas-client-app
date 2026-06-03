@@ -8,21 +8,31 @@ import { useAuthStore, useAuthStoreBase } from "@/store/store";
 type AuthGateProps = {
   children: React.ReactNode;
   mode: "protected" | "public";
+  isLanding?: boolean;
 };
 
-const AuthGate = ({ children, mode }: AuthGateProps) => {
+const AuthGate = ({ children, mode, isLanding = false }: AuthGateProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const token = useAuthStore((state) => state.token);
-  const [hydrated, setHydrated] = useState(useAuthStoreBase.persist.hasHydrated());
+  const [hydrated, setHydrated] = useState(
+    () => useAuthStoreBase.persist?.hasHydrated() ?? true
+  );
 
   useEffect(() => {
-    const unsubscribe = useAuthStoreBase.persist.onFinishHydration(() => {
+    if (hydrated) return;
+
+    const persistAPI = useAuthStoreBase.persist;
+    if (!persistAPI) {
+      return;
+    }
+
+    const unsubscribe = persistAPI.onFinishHydration(() => {
       setHydrated(true);
     });
-
+    
     return unsubscribe;
-  }, []);
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -36,15 +46,15 @@ const AuthGate = ({ children, mode }: AuthGateProps) => {
     }
   }, [hydrated, mode, pathname, router, token]);
 
-  if (!hydrated) {
+  if (!hydrated && !isLanding) {
     return <LoadingFallback />;
   }
 
-  if (mode === "protected" && !token) {
+  if (hydrated && mode === "protected" && !token) {
     return <LoadingFallback />;
   }
 
-  if (mode === "public" && token) {
+  if (hydrated && mode === "public" && token) {
     return <LoadingFallback />;
   }
 

@@ -14,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { usePlatform } from "@/context/platform-context";
 import { toast } from "@/hooks/use-toast";
 import { maskKey } from "@/lib/formatters";
@@ -29,6 +31,7 @@ const getErrorMessage = (error: unknown) => {
 const ApiKeysPage = () => {
   const { environment, canAccessLive } = usePlatform();
   const [showGenerate, setShowGenerate] = useState(false);
+  const [keyName, setKeyName] = useState("");
   const queryClient = useQueryClient();
 
   const apiKeysQuery = useQuery({
@@ -47,13 +50,13 @@ const ApiKeysPage = () => {
         });
         return;
       }
-
       toast({
         title: "API keys generated",
         description: response.message || "Your API keys are ready.",
         variant: "success",
       });
       setShowGenerate(false);
+      setKeyName("");
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
     onError: (error) => {
@@ -120,7 +123,7 @@ const ApiKeysPage = () => {
       });
       return;
     }
-    createApiKeysMutation.mutate()
+    createApiKeysMutation.mutate({ name: keyName });
   };
 
 
@@ -174,10 +177,24 @@ const ApiKeysPage = () => {
               Create public and secret keys for your integration.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Key Name</Label>
+              <Input
+                value={keyName}
+                onChange={(event) => setKeyName(event.target.value)}
+                placeholder="e.g., Production Key"
+                disabled={createApiKeysMutation.isPending}
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowGenerate(false)}
+              onClick={() => {
+                setShowGenerate(false);
+                setKeyName("");
+              }}
               disabled={createApiKeysMutation.isPending}
             >
               Cancel
@@ -185,7 +202,7 @@ const ApiKeysPage = () => {
             <Button
               className="gradient-primary text-primary-foreground"
               onClick={handleGenerate}
-              disabled={createApiKeysMutation.isPending}
+              disabled={createApiKeysMutation.isPending || !keyName.trim()}
             >
               {createApiKeysMutation.isPending ? (
                 <>

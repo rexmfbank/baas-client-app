@@ -73,8 +73,12 @@ export const getVirtualAccountsQueryFn = async (): Promise<VirtualAccountRespons
     return response.data;
 };
 
-export const createApiKeysMutationFn = async (): Promise<ApiKeysResponseType> => {
-    const response = await API.post("/client/onboarding/apikeys",{});
+export const createApiKeysMutationFn = async ({
+    name
+}: {
+    name: string;
+}): Promise<ApiKeysResponseType> => {
+    const response = await API.post(`/client/onboarding/apikeys?name=${encodeURIComponent(name)}`, {});
     return response.data;
 };
 
@@ -82,6 +86,11 @@ export const createWebhookMutationFn = async (
     data: CreateWebhookPayloadType
 ): Promise<CreateWebhookResponseType> => {
     const response = await API.post("/services/partner/webhook", data);
+    return response.data;
+};
+
+export const getWebhookQueryFn = async (): Promise<CreateWebhookResponseType> => {
+    const response = await API.get("/services/partner/webhook");
     return response.data;
 };
 
