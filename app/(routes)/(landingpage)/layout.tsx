@@ -8,7 +8,7 @@ export default function LandingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGate mode="public">
+    <AuthGate mode="public" isLanding>
         {children}
     </AuthGate>
   );

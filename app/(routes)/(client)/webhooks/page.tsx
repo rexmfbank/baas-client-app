@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { usePlatform } from "@/context/platform-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Plus, Trash2, TestTube, RotateCcw, Pencil, Check, X } from "lucide-reac
 import { Webhook } from "@/types/platform";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
-import { createWebhookMutationFn } from "@/lib/api-mutations";
+import { createWebhookMutationFn, getWebhookQueryFn } from "@/lib/api-mutations";
 
 const WebhooksPage = () => {
   const { webhooks, removeWebhook, updateWebhook, currentClientId } = usePlatform();
@@ -23,6 +23,14 @@ const WebhooksPage = () => {
   const [url, setUrl] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editUrl, setEditUrl] = useState("");
+
+  const webhookQuery = useQuery({
+    queryKey: ["webhooks"],
+    queryFn: getWebhookQueryFn,
+  });
+
+  console.log("webhookQuery.data", webhookQuery.data);
+
   const createWebhookMutation = useMutation({
     mutationFn: createWebhookMutationFn,
     onSuccess: (response) => {
@@ -186,5 +194,4 @@ const WebhooksPage = () => {
 }
 
 export default WebhooksPage;
-
 
